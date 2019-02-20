@@ -14,11 +14,7 @@ namespace WeddingPlanner.Controllers
     public class HomeController : Controller
     {
         private WeddingContext dbContext;
-        // here we can "inject" our context service into the constructor
-        public HomeController(WeddingContext context)
-        {
-            dbContext = context;
-        }
+        public HomeController(WeddingContext context) { dbContext = context; }
 
         [Route("")]
         [HttpGet]
@@ -27,39 +23,19 @@ namespace WeddingPlanner.Controllers
             return View();
         }
 
-
         [HttpPost("register")]
         public IActionResult Register(Users user)
         {
-
-            // Check initial ModelState
             if(ModelState.IsValid)
             {
-
-                // If a User exists with provided email
                 if(dbContext.Users.Any(u => u.Email == user.Email))
                 {
-                    // Manually add a ModelState error to the Email field, with provided
-                    // error message
                     ModelState.AddModelError("Email", "Email already in use!");
-                    
                     return View("Index");
-                    // You may consider returning to the View at this point
                 }
-
-                // Initializing a PasswordHasher object, providing our User class as its
-                PasswordHasher<Users> Hasher = new PasswordHasher<Users>();
-                user.Password = Hasher.HashPassword(user, user.Password);
-                //Save your user object to the database
-                dbContext.Add(user);
-                dbContext.SaveChanges();
-
-                HttpContext.Session.SetInt32("id", user.UserId);
-                Console.WriteLine(HttpContext.Session.GetInt32("id"));
-                return RedirectToAction("Success");
-
+                dbContext.createUser(HttpContext, user);
+                return RedirectToAction("Success", "HomeController");
             }
-            // other code
             return View("Index");
         }
 
@@ -68,58 +44,44 @@ namespace WeddingPlanner.Controllers
         {
             if(ModelState.IsValid)
             {
-                // If inital ModelState is valid, query for a user with provided email
-                var userInDb = dbContext.Users.FirstOrDefault(u => u.Email == userSubmission.Email);
-                // If no user exists with provided email
-                if(userInDb == null)
+                var userInDb = dbContext.Users
+                    .FirstOrDefault(u => u.Email == userSubmission.Email);
+                if(userInDb is null)
                 {
-                    // Add an error to ModelState and return to View!
                     ModelState.AddModelError("Email", "Invalid Email");
                     return View("Index");
                 }
-                
-                // Initialize hasher object
                 var hasher = new PasswordHasher<LoginUsers>();
-                
-                // varify provided password against hash stored in db
                 var result = hasher.VerifyHashedPassword(userSubmission, userInDb.Password, userSubmission.Password);
-                
-                // result can be compared to 0 for failure
                 if(result == 0)
                 {
-                    // handle failure (this should be similar to how "existing email" is handled)
                     ModelState.AddModelError("Password", "Wrong Password");
                     return View("Index");
-
                 }
-
-
                 HttpContext.Session.SetInt32("id", userInDb.UserId);
-                Console.WriteLine(HttpContext.Session.GetInt32("id"));
                 return RedirectToAction("Success");
             }
             return View("Index");
         }
+
         [HttpGet]
         [Route("Dashboard")]
         public IActionResult Success()
         {
             int? id = HttpContext.Session.GetInt32("id");
-
             if(id != null)
             {
                 List<Wedding> allWedding = dbContext.Wedding
                     .Include(d => d.Guest)
                     .ThenInclude(u =>u.Users)
                     .ToList();
-                ViewBag.weddings = allWedding;
 
-                ViewBag.id = id;
-
-                return View("WeddingDisplay");
+                Dashboard dash = new Dashboard();
+                dash.Weddings = allWedding;
+                dash.User = dbContext.Users.FirstOrDefault(u => u.UserId == id);
+                return View("WeddingDisplay", dash);
             }
             return View("Index");
-
         }
 
         [HttpGet]
@@ -135,9 +97,6 @@ namespace WeddingPlanner.Controllers
             if (ModelState.IsValid){
                 dbContext.Add(wed);
                 dbContext.SaveChanges();
-
-                Console.WriteLine(wed.WeddingId);
-                
                 return RedirectToAction("DisplayWed", new{wedId = wed.WeddingId});
 
             }
@@ -146,19 +105,28 @@ namespace WeddingPlanner.Controllers
         }
 
         [HttpPost("rsvp")]
-        public IActionResult DisplayWed(Guest g){
-            
+        public IActionResult DisplayWed(Guest g)
+        {
             dbContext.Add(g);
             dbContext.SaveChanges();
             return RedirectToAction("Success");
+        }
 
+        [HttpGet("rsvp/{userId}/{weddingId}")]
+        public IActionResult DisplayWed(int userId, int weddingId)
+        {
+           Guest g = new Guest();
+           g.UserId = userId; 
+           g.WeddingId = weddingId;
+            dbContext.Add(g);
+            dbContext.SaveChanges();
+            return RedirectToAction("Success");
         }
 
         [HttpPost("unrsvp")]
-        public IActionResult RemoveWed(Guest g){
-
+        public IActionResult RemoveWed(Guest g)
+        {
             Guest guest = dbContext.Guest.FirstOrDefault(d => d.GuestId == g.GuestId);
-            
             dbContext.Remove(guest);
             dbContext.SaveChanges();
             return RedirectToAction("Success");
@@ -167,25 +135,24 @@ namespace WeddingPlanner.Controllers
 
         [HttpGet]
         [Route("Display/{wedId}")]
-        public IActionResult DisplayWed(int wedId){
-
+        public IActionResult DisplayWed(int wedId)
+        {
             Wedding oneWed = dbContext.Wedding
                 .Include(p => p.Guest)
                 .ThenInclude(s => s.Users)
                 .FirstOrDefault(d => d.WeddingId == wedId);
 
             ViewBag.one = oneWed;
-
             return View("WeddingOne");
         }
 
         [HttpPost("delete/{wedId}")]
-        public IActionResult RemoveWed(int wedId){
-            Wedding oneRemove = dbContext.Wedding.FirstOrDefault(d => d.WeddingId == wedId);
-
+        public IActionResult RemoveWed(int wedId)
+        {
+            Wedding oneRemove = dbContext.Wedding
+                .FirstOrDefault(d => d.WeddingId == wedId);
             dbContext.Remove(oneRemove);
             dbContext.SaveChanges();
-
             return RedirectToAction("Success");
         }
 
