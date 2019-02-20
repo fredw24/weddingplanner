@@ -1,4 +1,4 @@
-@model Guest
+@model Dashboard
 <h1>Wedding Display</h1>
 
 <table>
@@ -11,14 +11,14 @@
     </tr>
 
     @{
-        foreach(var wed in @ViewBag.weddings)
+        foreach(var wed in @Model.Weddings)
         {
             <tr>
             <td><a href = "/Display/@wed.WeddingId">@wed.WeddingOne and @wed.WeddingTwo</a></td>
             <td>@wed.Date.ToString("yyyy-MM-dd")</td>
             <td>@wed.Guest.Count</td>
             <td>
-                @if(@wed.UserId == @ViewBag.id)
+                @if(@wed.UserId == @Model.User.UserId)
                 {
                     <form action = "/delete/@wed.WeddingId" method = "post">
                     <button>Delete</button>
@@ -30,11 +30,11 @@
                 {
                     var match = false;
                     foreach(var wedId in @wed.Guest){
-                        if (@wedId.Users.UserId == @ViewBag.id){
+                        if (@wedId.Users.UserId == @Model.User.UserId){
 
                             <form action = "/unrsvp" method = "post">
-                            <input type = "hidden" asp-for="GuestId" value = "@wedId.GuestId"><br>
-                            <button>Un-RSVP</button>
+                                <input type = "hidden" asp-for="GuestId" value = "@wedId.GuestId"><br>
+                                <button>Un-RSVP</button>
                             </form>
                             match = true;
                             break;
@@ -43,19 +43,12 @@
 
                     }
                     if (!match){
-                        <form action = "/rsvp" method = "post">
-                        <input type = "hidden" asp-for="UserId" value = "@ViewBag.id"><br>
-                        <input type = "hidden" asp-for="WeddingId" value = "@wed.WeddingId"><br>
-                        <button>RSVP</button>
-                        </form>
+                        <a href="/rsvp/@Model.User.UserId/@wed.WeddingId">RSVP</a>
                     }
-
                 }
-
             </td>
             </tr>
         }
-
     }
 
 
