@@ -1,0 +1,15 @@
+<h1>@ViewBag.one.WeddingOne - @ViewBag.one.WeddingTwo</h1>
+
+<h2>@ViewBag.one.Date</h2>
+
+<h2>Guests:</h2>
+
+@{
+    foreach(var user in @ViewBag.one.Guest)
+    {
+        <h3>@user.Users.FirstName @user.Users.LastName</h3>
+
+
+    }
+
+}

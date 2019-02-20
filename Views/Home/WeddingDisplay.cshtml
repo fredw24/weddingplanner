@@ -1,0 +1,69 @@
+@model Guest
+<h1>Wedding Display</h1>
+
+<table>
+    <tr>
+        <th>Wedding</th>
+        <th>Date</th>
+        <th>Guest<th>
+        <th>Action</th>
+
+    </tr>
+
+    @{
+        foreach(var wed in @ViewBag.weddings)
+        {
+            <tr>
+            <td><a href = "/Display/@wed.WeddingId">@wed.WeddingOne and @wed.WeddingTwo</a></td>
+            <td>@wed.Date.ToString("yyyy-MM-dd")</td>
+            <td>@wed.Guest.Count</td>
+            <td>
+                @if(@wed.UserId == @ViewBag.id)
+                {
+                    <form action = "/delete/@wed.WeddingId" method = "post">
+                    <button>Delete</button>
+
+                    </form>
+
+                }
+                else
+                {
+                    var match = false;
+                    foreach(var wedId in @wed.Guest){
+                        if (@wedId.Users.UserId == @ViewBag.id){
+
+                            <form action = "/unrsvp" method = "post">
+                            <input type = "hidden" asp-for="GuestId" value = "@wedId.GuestId"><br>
+                            <button>Un-RSVP</button>
+                            </form>
+                            match = true;
+                            break;
+
+                        }
+
+                    }
+                    if (!match){
+                        <form action = "/rsvp" method = "post">
+                        <input type = "hidden" asp-for="UserId" value = "@ViewBag.id"><br>
+                        <input type = "hidden" asp-for="WeddingId" value = "@wed.WeddingId"><br>
+                        <button>RSVP</button>
+                        </form>
+                    }
+
+                }
+
+            </td>
+            </tr>
+        }
+
+    }
+
+
+</table>
+
+
+<a href = "new">Add Wedding</a>
+
+<form action = "logout" method = "post">
+    <button>Log Out</button>
+</form>
